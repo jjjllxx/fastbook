@@ -1,0 +1,4 @@
+list(APPEND FB_CORE
+${CMAKE_CURRENT_LIST_DIR}/MatchingEngine.cpp
+${CMAKE_CURRENT_LIST_DIR}/OrderBook.cpp
+)
