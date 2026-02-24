@@ -27,3 +27,7 @@ target_include_directories(${FB_TARGET} PUBLIC ${PROJECT_SOURCE_DIR})
 
 set_target_properties(${FB_TARGET} PROPERTIES 
     RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
+
+if (TEST)
+    add_subdirectory("Test")
+endif()
