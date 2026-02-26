@@ -31,3 +31,7 @@ set_target_properties(${FB_TARGET} PROPERTIES
 if (TEST)
     add_subdirectory("Test")
 endif()
+
+if (BENCH)
+    add_subdirectory("Benchmark")
+endif()
