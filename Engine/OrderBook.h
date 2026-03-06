@@ -10,7 +10,25 @@ namespace fb
 {
 class OrderBook
 {
-    std::unordered_map<uint64_t, fb::Order> ordersMap_;
+    enum class OrderStatus : uint8_t
+    {
+        New,
+        PartiallyFilled,
+        Filled,
+        Canceled
+    };
+
+    struct OrderEntry
+    {
+        Side        side;
+        uint64_t    id;
+        int64_t     price;
+        int64_t     remainingQty;
+        uint64_t    timestamp;
+        OrderStatus status;
+    };
+
+    std::unordered_map<uint64_t, OrderEntry> ordersMap_;
 
     std::map<int64_t, std::list<uint64_t>, std::less<>>    askBook_;
     std::map<int64_t, std::list<uint64_t>, std::greater<>> bidBook_;

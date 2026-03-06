@@ -2,23 +2,24 @@
 #include "Order.h"
 
 void fb::OrderBook::reduceAsk_(const uint64_t orderId,
-                              const int64_t  price,
-                              const int64_t  reduceQty)
+                               const int64_t  price,
+                               const int64_t  reduceQty)
 {
-    if (askBook_.contains(price) == false)
+    auto bookIt = askBook_.find(price);
+    if (bookIt == askBook_.end())
     {
         return;
     }
 
-    for (auto it = askBook_[price].begin(); it != askBook_[price].end(); ++it)
+    for (auto it = bookIt->second.begin(); it != bookIt->second.end(); ++it)
     {
         if (*it == orderId)
         {
-            if (int64_t& qty = ordersMap_[orderId].quantity;
-                qty <= reduceQty)
+            if (OrderEntry& entry = ordersMap_[orderId];
+                entry.remainingQty <= reduceQty)
             {
-                askBook_[price].erase(it);
-                if (askBook_[price].empty())
+                bookIt->second.erase(it);
+                if (bookIt->second.empty())
                 {
                     askBook_.erase(price);
                 }
@@ -26,7 +27,8 @@ void fb::OrderBook::reduceAsk_(const uint64_t orderId,
             }
             else
             {
-                qty -= reduceQty;
+                entry.remainingQty -= reduceQty;
+                entry.status = OrderStatus::PartiallyFilled;
             }
             break;
         }
@@ -34,23 +36,24 @@ void fb::OrderBook::reduceAsk_(const uint64_t orderId,
 }
 
 void fb::OrderBook::reduceBid_(const uint64_t orderId,
-                              const int64_t  price,
-                              const int64_t  reduceQty)
+                               const int64_t  price,
+                               const int64_t  reduceQty)
 {
-    if (bidBook_.contains(price) == false)
+    auto bookIt = bidBook_.find(price);
+    if (bookIt == bidBook_.end())
     {
         return;
     }
 
-    for (auto it = bidBook_[price].begin(); it != bidBook_[price].end(); ++it)
+    for (auto it = bookIt->second.begin(); it != bookIt->second.end(); ++it)
     {
         if (*it == orderId)
         {
-            if (int64_t& qty = ordersMap_[orderId].quantity;
-                qty <= reduceQty)
+            if (OrderEntry& entry = ordersMap_[orderId];
+                entry.remainingQty <= reduceQty)
             {
-                bidBook_[price].erase(it);
-                if (bidBook_[price].empty())
+                bookIt->second.erase(it);
+                if (bookIt->second.empty())
                 {
                     bidBook_.erase(price);
                 }
@@ -58,7 +61,8 @@ void fb::OrderBook::reduceBid_(const uint64_t orderId,
             }
             else
             {
-                qty -= reduceQty;
+                entry.remainingQty -= reduceQty;
+                entry.status = OrderStatus::PartiallyFilled;
             }
             break;
         }
@@ -67,7 +71,16 @@ void fb::OrderBook::reduceBid_(const uint64_t orderId,
 
 void fb::OrderBook::addOrder(const fb::Order& order)
 {
-    ordersMap_[order.id] = order;
+    OrderEntry entry {
+        .id           = order.id,
+        .side         = order.side,
+        .price        = order.price,
+        .remainingQty = order.quantity,
+        .timestamp    = order.timestamp,
+        .status       = OrderStatus::New
+    };
+
+    ordersMap_.emplace(order.id, entry);
     order.side == fb::Side::Buy
         ? bidBook_[order.price].push_back(order.id)
         : askBook_[order.price].push_back(order.id);
@@ -118,8 +131,8 @@ std::optional<fb::OrderView> fb::OrderBook::getBestBidOrder() const
     {
         return std::nullopt;
     }
-    const fb::Order& order = ordersMap_.at(bidBook_.begin()->second.front());
-    return fb::OrderView { .id = order.id, .price = order.price, .quantity = order.quantity };
+    const OrderEntry& entry = ordersMap_.at(bidBook_.begin()->second.front());
+    return fb::OrderView { .id = entry.id, .price = entry.price, .quantity = entry.remainingQty };
 }
 
 std::optional<fb::OrderView> fb::OrderBook::getBestAskOrder() const
@@ -128,6 +141,6 @@ std::optional<fb::OrderView> fb::OrderBook::getBestAskOrder() const
     {
         return std::nullopt;
     }
-    const fb::Order& order = ordersMap_.at(askBook_.begin()->second.front());
-    return fb::OrderView { .id = order.id, .price = order.price, .quantity = order.quantity };
+    const OrderEntry& entry = ordersMap_.at(askBook_.begin()->second.front());
+    return fb::OrderView { .id = entry.id, .price = entry.price, .quantity = entry.remainingQty };
 }
